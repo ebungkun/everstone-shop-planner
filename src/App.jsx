@@ -281,9 +281,9 @@ function App() {
           {/* --- 오른쪽 사이드바 --- */}
           <div className="lg:w-1/3 mt-8 lg:mt-0">
             <div className="sticky top-24 lg:top-8 bg-white rounded-lg shadow-lg">
-              {/* 구매 계획 요약 */}
               <h2 className="text-2xl font-bold p-6 border-b border-zinc-200 text-zinc-800">구매 계획 요약</h2>
-              <div className="p-6 space-y-3 max-h-[40vh] overflow-y-auto">
+              {/* --- 수정된 부분: max-h-[40vh] overflow-y-auto 클래스 제거 --- */}
+              <div className="p-6 space-y-3">
                 {cartSummary.details.length > 0 ? (
                   cartSummary.details.map(([name, data]) => (
                     <div key={name} className="flex justify-between items-center text-base">
@@ -309,7 +309,6 @@ function App() {
                         <span>공유하기</span>
                     </button>
                     </div>
-                    {/* 기존 copySuccess 메시지 삭제 */}
                 </div>
               )}
               
