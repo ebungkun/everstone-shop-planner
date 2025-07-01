@@ -26,19 +26,45 @@ const CheckCircleIcon = ({ className }) => (
     </svg>
 );
 
+const ArrowUturnLeftIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+    </svg>
+);
 
-// --- 상단 고정 헤더 컴포넌트 ---
-const StickyHeader = ({ totalCost }) => (
+
+// --- 상단 고정 헤더 컴포넌트 (수정됨) ---
+const StickyHeader = ({ totalCost, hasSelection, onReset, onShare }) => (
   <div className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-md z-20 lg:hidden">
     <div className="container mx-auto px-4 sm:px-6 md:px-8 h-16 flex justify-between items-center">
-      <h1 className="text-xl font-bold text-zinc-800">구매 플래너</h1>
-      <div className="text-right">
+      <div>
         <span className="text-sm text-zinc-500 block">총 예상 비용</span>
         <span className="text-lg font-bold text-sky-600">{totalCost.toLocaleString()} 에버스톤</span>
       </div>
+      {hasSelection && (
+        <div className="flex items-center gap-2">
+          <button onClick={onReset} className="flex items-center justify-center p-2.5 bg-zinc-600 text-white font-semibold rounded-lg hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-600 transition-colors">
+              <ArrowUturnLeftIcon className="w-5 h-5" />
+          </button>
+          <button onClick={onShare} className="flex items-center justify-center p-2.5 bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">
+              <LinkIcon className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
   </div>
 );
+
+// +++ 추가된 컴포넌트: 토스트 알림 +++
+const Toast = ({ message, isVisible }) => {
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300 animate-fade-in-out">
+      {message}
+    </div>
+  );
+};
 
 
 function App() {
@@ -46,7 +72,7 @@ function App() {
   const [rewards, setRewards] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [error, setError] = useState(null);
-  const [copySuccess, setCopySuccess] = useState('');
+  const [toastMessage, setToastMessage] = useState(''); // copySuccess를 대체할 새로운 상태
 
   // 범용 CSV 파싱 함수
   const parseCSV = (text) => {
@@ -60,6 +86,14 @@ function App() {
         return obj;
       }, {});
     });
+  };
+  
+  // +++ 추가된 함수: 토스트 메시지 표시 +++
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage('');
+    }, 2500); // 2.5초 후에 메시지 사라짐
   };
 
   // 데이터 로딩 (아이템 목록 + 누적 보상 목록)
@@ -106,7 +140,6 @@ function App() {
         '지급 수량': parseInt(reward['지급 수량'], 10) || 1,
       }));
       setRewards(enhancedRewards);
-
     })
     .catch(error => {
       console.error('데이터 파일을 불러오는 중 에러 발생:', error);
@@ -157,11 +190,17 @@ function App() {
   const handleGroupToggle = (groupName, shouldBePurchased) => setItems(prev => prev.map(item => item.아이템명 === groupName ? { ...item, isPurchased: shouldBePurchased } : item));
   const handleItemToggle = (itemId) => setItems(prev => prev.map(item => item.id === itemId ? { ...item, isPurchased: !item.isPurchased } : item));
   const toggleGroupExpansion = (groupName) => setExpandedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }));
+  
+  // 핸들러 함수 수정: 토스트 사용
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
-        setCopySuccess('URL이 복사되었습니다!');
-        setTimeout(() => setCopySuccess(''), 2000);
-    }, () => setCopySuccess('복사에 실패했습니다.'));
+        showToast('URL이 클립보드에 복사되었습니다.');
+    }, () => showToast('복사에 실패했습니다.'));
+  };
+
+  const handleResetSelection = () => {
+    setItems(prev => prev.map(item => ({ ...item, isPurchased: false })));
+    showToast('모든 선택이 초기화되었습니다.');
   };
 
   // 파스텔 색상 팔레트
@@ -182,7 +221,12 @@ function App() {
 
   return (
     <div className="bg-neutral-100 text-neutral-800 min-h-screen font-sans">
-      <StickyHeader totalCost={cartSummary.totalPrice} />
+      <StickyHeader
+        totalCost={cartSummary.totalPrice}
+        hasSelection={cartSummary.details.length > 0}
+        onReset={handleResetSelection}
+        onShare={handleCopyUrl}
+      />
       <main className="container mx-auto p-4 sm:p-6 md:p-8 pt-24 lg:pt-8">
         <header className="text-center mb-10">
           <h1 className="text-4xl md:text-5xl font-bold text-neutral-900">에버스톤 상점 구매 플래너</h1>
@@ -255,15 +299,20 @@ function App() {
                       <span className="font-semibold text-zinc-800">총 예상 비용:</span>
                       <span className="font-bold text-sky-600">{cartSummary.totalPrice.toLocaleString()} 에버스톤</span>
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button onClick={handleResetSelection} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-zinc-600 text-white font-semibold rounded-lg hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-600 transition-colors">
+                            <ArrowUturnLeftIcon className="w-5 h-5" />
+                            <span>선택 초기화</span>
+                        </button>
                     <button onClick={handleCopyUrl} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors">
                         <LinkIcon className="w-5 h-5" />
                         <span>공유하기</span>
                     </button>
-                    {copySuccess && <p className="text-sm text-center text-green-600 mt-2">{copySuccess}</p>}
+                    </div>
+                    {/* 기존 copySuccess 메시지 삭제 */}
                 </div>
               )}
               
-              {/* 누적 구매 보상 섹션 */}
               {rewards.length > 0 && (
                 <div className="border-t border-zinc-200">
                     <h2 className="text-2xl font-bold p-6 text-zinc-800">누적 구매 보상</h2>
@@ -302,6 +351,8 @@ function App() {
       <footer className="text-center py-4 text-zinc-500 text-sm mt-10">
         <p>제작자: 에붕소울 (아카라이브 에버소울 채널)</p>
       </footer>
+      {/* 토스트 컴포넌트 렌더링 */}
+      <Toast message={toastMessage} isVisible={!!toastMessage} />
     </div>
   );
 }
