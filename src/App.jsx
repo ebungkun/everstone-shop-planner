@@ -43,7 +43,7 @@ const StickyHeader = ({ totalCost }) => (
 
 function App() {
   const [items, setItems] = useState([]);
-  const [rewards, setRewards] = useState([]); // 누적 보상 목록을 위한 state
+  const [rewards, setRewards] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [error, setError] = useState(null);
   const [copySuccess, setCopySuccess] = useState('');
@@ -64,9 +64,12 @@ function App() {
 
   // 데이터 로딩 (아이템 목록 + 누적 보상 목록)
   useEffect(() => {
+    // Vite의 환경 변수를 사용하여 올바른 기본 경로를 설정합니다.
+    const baseUrl = import.meta.env.BASE_URL;
+
     Promise.all([
-      fetch('/item_list.csv').then(res => res.ok ? res.text() : Promise.reject(new Error('아이템 목록 파일(item_list.csv)을 찾을 수 없습니다.'))),
-      fetch('/reward_list.csv').then(res => res.ok ? res.text() : Promise.reject(new Error('누적 보상 파일(reward_list.csv)을 찾을 수 없습니다.')))
+      fetch(`${baseUrl}item_list.csv`).then(res => res.ok ? res.text() : Promise.reject(new Error('아이템 목록 파일(item_list.csv)을 찾을 수 없습니다.'))),
+      fetch(`${baseUrl}reward_list.csv`).then(res => res.ok ? res.text() : Promise.reject(new Error('누적 보상 파일(reward_list.csv)을 찾을 수 없습니다.')))
     ])
     .then(([itemCsvText, rewardCsvText]) => {
       // 아이템 데이터 처리
@@ -100,7 +103,7 @@ function App() {
       const enhancedRewards = parsedRewards.map(reward => ({
         ...reward,
         '누적 소모 에버스톤': parseInt(reward['누적 소모 에버스톤'], 10) || 0,
-        '지급 수량': parseInt(reward['지급 수량'], 10) || 1, // "수량" -> "지급 수량"으로 수정
+        '지급 수량': parseInt(reward['지급 수량'], 10) || 1,
       }));
       setRewards(enhancedRewards);
 
